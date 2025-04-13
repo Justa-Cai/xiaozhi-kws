@@ -15,7 +15,6 @@
 #include "model.h"
 #include "config_parser.h"
 #include "post_processor.h"
-#include "mfcc_features.h"
 #include <onnxruntime/onnxruntime_cxx_api.h>
 
 /**
@@ -65,9 +64,10 @@ public:
      * 
      * @param audio_path 音频文件路径
      * @param confidence 输出参数，检测置信度
+     * @param debug_mode 是否为调试模式
      * @return 是否检测到唤醒词
      */
-    bool detect_file(const std::string& audio_path, float& confidence);
+    bool detect_file(const std::string& audio_path, float& confidence, bool debug_mode = false);
     
     /**
      * 重置检测器状态
@@ -124,12 +124,11 @@ private:
     // 配置
     std::unique_ptr<ConfigParser> config_parser_;
     InferenceConfig inference_config_;
-    xiaozhi::Config config_; // 添加xiaozhi配置
+    FeatureConfig feature_config_; // 添加 FeatureConfig 成员变量
     
     // 模型和特征提取器
     std::unique_ptr<Model> model_;
     std::unique_ptr<FeatureExtractor> feature_extractor_;
-    std::unique_ptr<MFCCFeatures> mfcc_features_; // MFCC特征提取器
     
     // ONNX运行时相关
     std::unique_ptr<Ort::Session> session_;
@@ -154,13 +153,7 @@ private:
     std::vector<float> load_audio_from_pcm(const int16_t* audio_data, size_t audio_len);
     
     // 从文件加载音频
-    std::vector<float> load_audio_from_file(const std::string& audio_path);
-    
-    // 从MP3文件加载音频
-    std::vector<float> load_audio_from_mp3(const std::string& audio_path);
-    
-    // 从WAV文件加载音频
-    std::vector<float> load_audio_from_wav(const std::string& audio_path);
+    std::vector<float> load_audio_from_file(const std::string& filepath, int& source_sample_rate);
     
     // 计算音频能量
     float calculate_audio_energy(const std::vector<float>& audio);

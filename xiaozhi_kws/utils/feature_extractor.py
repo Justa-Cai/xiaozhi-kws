@@ -20,70 +20,83 @@ class FeatureExtractor:
                 - n_mels: Mel滤波器组数量
                 - use_delta: 是否使用MFCC一阶差分
                 - use_delta2: 是否使用MFCC二阶差分
+                - preemphasis_coeff: 预加重系数
         """
         self.sample_rate = config["sample_rate"]
         self.window_size = int(config["window_size_ms"] * self.sample_rate / 1000)
         self.window_stride = int(config["window_stride_ms"] * self.sample_rate / 1000)
-        self.n_mfcc = config["n_mfcc"]
         self.n_fft = config["n_fft"]
-        self.n_mels = config["n_mels"]
-        self.use_delta = config["use_delta"]
-        self.use_delta2 = config["use_delta2"]
+        self.n_mels = config.get("n_mels", 80)
+        self.n_mfcc = config.get("n_mfcc", 40)
+        self.use_delta = config.get("use_delta", True)
+        self.use_delta2 = config.get("use_delta2", False)
+        self.preemphasis_coeff = config.get("preemphasis_coeff", 0.97)
     
     def extract_features(self, audio, normalize=True):
         """
-        从音频信号中提取MFCC特征
-        
+        从音频信号中提取MFCC特征 (可能包含Delta)
+
         Args:
             audio: 音频信号，numpy数组
-            normalize: 是否对特征进行归一化
-            
+            normalize: 是否对特征进行归一化 (幅度归一化)
+
         Returns:
             features: MFCC特征，shape=(num_frames, num_features)
         """
         # 确保音频是浮点型
         if audio.dtype != np.float32:
             audio = audio.astype(np.float32)
-        
-        # 如果音频振幅不在[-1, 1]范围内，进行归一化
+
+        # 幅度归一化
         if normalize and np.max(np.abs(audio)) > 1.0:
-            audio = audio / np.max(np.abs(audio))
-            
-        # 确保音频长度足够，至少能提取5帧特征
-        min_samples = self.window_size + 4 * self.window_stride
-        if len(audio) < min_samples:
-            # 填充音频到最小长度
-            audio = np.pad(audio, (0, min_samples - len(audio)), 'constant')
-        
-        # 提取MFCC特征
+             max_abs = np.max(np.abs(audio))
+             if max_abs > 1e-6:
+                 audio = audio / max_abs
+             else:
+                 audio = np.zeros_like(audio)
+
+        # 1. Pre-emphasis
+        if self.preemphasis_coeff > 0.0:
+            audio = np.append(audio[0], audio[1:] - self.preemphasis_coeff * audio[:-1])
+
+        # 2. Compute MFCC using librosa
+        # Use n_mels for the Mel filterbank base, then extract n_mfcc coefficients
         mfccs = librosa.feature.mfcc(
             y=audio,
             sr=self.sample_rate,
-            n_mfcc=self.n_mfcc,
             n_fft=self.n_fft,
             hop_length=self.window_stride,
             win_length=self.window_size,
-            n_mels=self.n_mels
+            window='hann',
+            center=True,            # Use padding similar to C++ fix
+            n_mels=self.n_mels,     # Base Mel filters
+            n_mfcc=self.n_mfcc,     # Number of MFCC coefficients to keep
+            # power=2.0 is default for mfcc internal melspectrogram
         )
-        
-        # 转置特征以便每行代表一帧
-        mfccs = mfccs.T  # shape: (num_frames, n_mfcc)
-        
-        features = [mfccs]
-        
-        # 添加一阶差分（delta）特征
+
+        # Transpose to have shape (num_frames, n_mfcc)
+        mfccs = mfccs.T
+
+        # 3. Calculate delta features if needed
+        features_list = [mfccs]
         if self.use_delta:
-            delta = librosa.feature.delta(mfccs.T, width=3).T
-            features.append(delta)
-        
-        # 添加二阶差分（delta2）特征
-        if self.use_delta2:
-            delta2 = librosa.feature.delta(mfccs.T, order=2, width=3).T
-            features.append(delta2)
-        
-        # 合并所有特征
-        features = np.concatenate(features, axis=1)
-        
+            # Librosa's default width is 9, let's use a smaller width like 3 for consistency
+            # with typical KWS setups unless config specifies otherwise. Let's assume width=3.
+            delta = librosa.feature.delta(mfccs.T, width=3).T # Calculate delta on transposed mfccs
+            features_list.append(delta)
+        if self.use_delta2: # Although config says false, keep the logic just in case
+             delta2 = librosa.feature.delta(mfccs.T, order=2, width=3).T
+             features_list.append(delta2)
+
+        # 4. Concatenate features
+        features = np.concatenate(features_list, axis=1)
+
+        # Ensure minimum length (optional, C++ might handle this)
+        # min_frames = 5 # Example
+        # if features.shape[0] < min_frames:
+        #     padding = np.zeros((min_frames - features.shape[0], features.shape[1]))
+        #     features = np.vstack((features, padding))
+
         return features
     
     def extract_features_batch(self, audio_list, normalize=True):

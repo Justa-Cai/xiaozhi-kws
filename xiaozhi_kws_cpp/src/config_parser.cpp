@@ -60,17 +60,21 @@ void parse_yaml_line(const std::string& line,
 
 ConfigParser::ConfigParser(const std::string& config_path) {
     // 读取配置文件
+    std::cout << "[ConfigParser Debug] Trying to open: " << config_path << std::endl; // DEBUG
     std::ifstream file(config_path);
     if (!file.is_open()) {
+        std::cerr << "[ConfigParser Debug] File open failed!" << std::endl; // DEBUG
         throw std::runtime_error("Failed to open config file: " + config_path);
     }
     
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string content = buffer.str();
+    std::cout << "[ConfigParser Debug] File opened successfully. Content length: " << content.length() << std::endl; // DEBUG
     
     // 解析YAML
     parse_yaml(content);
+    std::cout << "[ConfigParser Debug] YAML parsed. Map size: " << config_map_.size() << std::endl; // DEBUG
 }
 
 void ConfigParser::parse_yaml(const std::string& content) {

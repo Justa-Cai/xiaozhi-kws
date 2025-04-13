@@ -23,6 +23,7 @@ struct FeatureConfig {
     int n_mels;
     bool use_delta;
     bool use_delta2;
+    double preemphasis_coeff = 0.97;
 };
 
 /**

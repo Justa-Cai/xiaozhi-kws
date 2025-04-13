@@ -13,6 +13,7 @@
 #include <numeric>
 #include <cmath>
 #include "config.h"
+#include "config_parser.h" // 包含 InferenceConfig 定义
 
 namespace xiaozhi {
 
@@ -35,7 +36,7 @@ public:
      * 
      * @param config 配置对象
      */
-    explicit PostProcessor(const Config& config);
+    explicit PostProcessor(const InferenceConfig& config);
 
     /**
      * @brief 处理单个检测结果
@@ -95,13 +96,14 @@ public:
     bool apply_vad(float audio_energy);
 
 private:
-    // 配置参数
+    // 配置参数 - 使用 InferenceConfig 中的字段
     float detection_threshold_;                  // 检测阈值
     int smooth_window_size_;                     // 平滑窗口大小
     std::chrono::milliseconds min_detection_interval_; // 最小检测间隔
-    bool apply_vad_;                             // 是否应用VAD
-    float vad_threshold_;                        // VAD阈值
-    int vad_window_size_;                        // VAD窗口大小
+    // VAD相关参数可以保留，如果 InferenceConfig 中也定义了的话
+    bool apply_vad_ = false;                     // 默认不应用VAD，除非配置指定
+    float vad_threshold_ = 0.1f;                 // 默认VAD阈值
+    int vad_window_size_ = 10;                   // 默认VAD窗口大小
 
     // 状态变量
     std::deque<float> confidence_history_;       // 置信度历史

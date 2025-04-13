@@ -99,11 +99,16 @@ bool detect_audio_file_c_api(const std::string& model_path,
     
     if (err != XIAOZHI_KWS_SUCCESS) {
         std::cerr << "处理文件失败：" << audio_path << std::endl;
-        return false;
+        // 返回 false 表示检测失败或出错
+        confidence = 0.0f; // 出错时置信度设为0
+        return false; 
     }
     
-    // 默认通过C API的结果判断是否检测到唤醒词
-    return confidence > threshold;
+    // C API 直接返回是否超过阈值，我们根据置信度判断
+    // 注意：C API 的设计可能不同，这里假设它会填充confidence
+    // 如果C API本身逻辑就是判断是否>threshold，那这里可能需要调整
+    // 但为了统一比较，我们总是返回 confidence > threshold
+    return confidence > threshold; 
 }
 
 void print_usage(const char* program_name) {
@@ -205,35 +210,51 @@ int main(int argc, char** argv) {
         auto start_time = std::chrono::system_clock::now();
         
         for (size_t i = 0; i < audio_files.size(); ++i) {
-            std::cout << "[" << (i+1) << "/" << audio_files.size() << "] 处理: " 
-                     << fs::path(audio_files[i]).filename().string() << std::endl;
+            // 如果不是debug模式，只打印基本信息
+            if (!debug_mode) {
+                std::cout << "[" << (i+1) << "/" << audio_files.size() << "] 处理: " 
+                         << fs::path(audio_files[i]).filename().string() << std::endl;
+            }
             
             float confidence = 0.0f;
             bool detected = false;
             
             if (use_c_api) {
                 // 使用C API
-                detected = detect_audio_file_c_api(
-                    model_path, config_path, audio_files[i], threshold, confidence);
-            } else {
-                // 调试模式 - 只有在调试模式下才添加详细输出
-                if (debug_mode) {
-                    // C++ API的debug_file_detection会添加更详细的输出
-                    std::cout << "\n===== 开始Python/C++对比调试 =====" << std::endl;
+                // C API 目前没有调试模式，如果需要，需要修改 C API 实现
+                 if (debug_mode) {
+                    std::cout << "\n===== [C API Debug] 开始处理文件 =====" << std::endl;
                     std::cout << "文件: " << audio_files[i] << std::endl;
-                    detected = detector->detect_file(audio_files[i], confidence);
-                    std::cout << "===== 结束Python/C++对比调试 =====\n" << std::endl;
+                }
+                detected = detect_audio_file_c_api(
+                    model_path, config_path, audio_files[i], threshold > 0.0f ? threshold : detector ? detector->get_threshold() : 0.5f, confidence); // 获取阈值
+                if (debug_mode) {
+                     std::cout << "[C API Debug] 置信度: " << confidence << ", 阈值: " << (threshold > 0.0f ? threshold : detector ? detector->get_threshold() : 0.5f) << std::endl;
+                     std::cout << "[C API Debug] 检测结果: " << (detected ? "是" : "否") << std::endl;
+                     std::cout << "===== [C API Debug] 结束处理文件 =====\n" << std::endl;
+                }
+            } else {
+                // 使用C++ API
+                // 在调用 detect_file 前后添加调试分隔符
+                if (debug_mode) {
+                    std::cout << "\n===== [C++ Debug] 开始处理文件 =====" << std::endl;
+                    std::cout << "文件: " << audio_files[i] << std::endl;
+                    // 调用 detect_file 并传递 debug_mode
+                    detected = detector->detect_file(audio_files[i], confidence, true); // 传递 true 启用内部调试日志
+                    std::cout << "===== [C++ Debug] 结束处理文件 =====\n" << std::endl;
                 } else {
-                    // 正常检测流程
-                    detected = detector->detect_file(audio_files[i], confidence);
+                    // 正常检测流程，不传递 debug_mode 或传递 false
+                    detected = detector->detect_file(audio_files[i], confidence, false); 
                 }
             }
             
             detection_results.push_back(detected);
             confidence_scores.push_back(confidence);
             
-            std::cout << "  结果: " << (detected ? "✓ 检测到唤醒词" : "✗ 未检测到唤醒词") 
-                     << ", 置信度: " << std::fixed << std::setprecision(4) << confidence << std::endl;
+            // 始终打印文件名和置信度
+            std::cout << "文件: " << fs::path(audio_files[i]).filename().string() 
+                      << ", 置信度: " << std::fixed << std::setprecision(6) << confidence 
+                      << ", 检测结果: " << (detected ? "是" : "否") << std::endl;
         }
         
         auto end_time = std::chrono::system_clock::now();

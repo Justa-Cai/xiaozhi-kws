@@ -30,8 +30,9 @@ public:
      * 
      * @param model_path 模型文件路径
      * @param config 模型配置
+     * @param threshold 检测阈值 (用于内部调试日志)
      */
-    Model(const std::string& model_path, const ModelConfig& config);
+    Model(const std::string& model_path, const ModelConfig& config, float threshold = 0.5f);
     
     /**
      * 析构函数
@@ -50,16 +51,14 @@ public:
      * 检测是否为关键词
      * 
      * @param features 输入特征
-     * @param threshold 检测阈值
-     * @return pair<是否为关键词, 置信度>
+     * @return 关键词置信度
      */
-    std::pair<bool, float> detect(
-        const std::vector<std::vector<float>>& features, 
-        float threshold);
+    float detect(const std::vector<std::vector<float>>& features);
 
 private:
     // 模型配置
     ModelConfig config_;
+    float detection_threshold_; // 存储阈值用于日志
     
     // ONNX运行时
     std::shared_ptr<Ort::Env> env_;

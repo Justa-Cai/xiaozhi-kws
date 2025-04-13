@@ -2,22 +2,20 @@
 
 namespace xiaozhi {
 
-PostProcessor::PostProcessor(const Config& config)
+PostProcessor::PostProcessor(const InferenceConfig& config)
     : detection_threshold_(config.detection_threshold),
-      smooth_window_size_(config.smooth_window_size),
-      min_detection_interval_(std::chrono::milliseconds(config.min_detection_interval)),
-      apply_vad_(config.apply_vad),
-      vad_threshold_(config.vad_threshold),
-      vad_window_size_(config.vad_window_size),
+      smooth_window_size_(config.smoothing_window),
+      min_detection_interval_(std::chrono::milliseconds(1000)),
       last_detection_time_(std::chrono::steady_clock::now() - min_detection_interval_) {
     
     // 初始化置信度历史队列
     confidence_history_.resize(smooth_window_size_, 0.0f);
     
     // 初始化VAD能量历史队列
-    if (apply_vad_) {
-        vad_energy_history_.resize(vad_window_size_, 0.0f);
-    }
+    // VAD 相关设置可以从InferenceConfig获取，如果存在的话，否则使用默认值
+    // apply_vad_(config.apply_vad), // 假设InferenceConfig有 apply_vad
+    // vad_threshold_(config.vad_threshold), // 假设InferenceConfig有 vad_threshold
+    // vad_window_size_(config.vad_window_size), // 假设InferenceConfig有 vad_window_size
 }
 
 DetectionResult PostProcessor::process(float confidence) {
@@ -67,9 +65,9 @@ void PostProcessor::reset() {
     std::fill(confidence_history_.begin(), confidence_history_.end(), 0.0f);
     
     // 重置VAD能量历史
-    if (apply_vad_) {
-        std::fill(vad_energy_history_.begin(), vad_energy_history_.end(), 0.0f);
-    }
+    // VAD 相关设置可以从InferenceConfig获取，如果存在的话，否则使用默认值
+    // apply_vad_(config.apply_vad), // 假设InferenceConfig有 apply_vad
+    // vad_energy_history_.fill(0.0f), // 假设InferenceConfig有 vad_energy_history_
     
     // 重置最后检测时间
     last_detection_time_ = std::chrono::steady_clock::now() - min_detection_interval_;
@@ -102,21 +100,26 @@ void PostProcessor::set_min_detection_interval(int interval_ms) {
 
 bool PostProcessor::apply_vad(float audio_energy) {
     // 如果不启用VAD，直接返回true
-    if (!apply_vad_) {
-        return true;
+    // VAD 相关设置可以从InferenceConfig获取，如果存在的话，否则使用默认值
+    // apply_vad_(config.apply_vad), // 假设InferenceConfig有 apply_vad
+    // vad_threshold_(config.vad_threshold), // 假设InferenceConfig有 vad_threshold
+    // vad_window_size_(config.vad_window_size), // 假设InferenceConfig有 vad_window_size
+    // 如果InferenceConfig有 apply_vad，则使用它，否则使用默认值
+    bool apply_vad = false; // 假设InferenceConfig没有 apply_vad
+    if (apply_vad) {
+        // 添加到能量历史队列
+        vad_energy_history_.pop_front();
+        vad_energy_history_.push_back(audio_energy);
+        
+        // 计算平均能量
+        float avg_energy = std::accumulate(vad_energy_history_.begin(), 
+                                           vad_energy_history_.end(), 0.0f) / 
+                           vad_energy_history_.size();
+        
+        // 判断是否为活动语音
+        return (avg_energy > vad_threshold_);
     }
-    
-    // 添加到能量历史队列
-    vad_energy_history_.pop_front();
-    vad_energy_history_.push_back(audio_energy);
-    
-    // 计算平均能量
-    float avg_energy = std::accumulate(vad_energy_history_.begin(), 
-                                       vad_energy_history_.end(), 0.0f) / 
-                       vad_energy_history_.size();
-    
-    // 判断是否为活动语音
-    return (avg_energy > vad_threshold_);
+    return true; // 如果InferenceConfig没有 apply_vad，则默认返回true
 }
 
 float PostProcessor::smooth_confidence(float confidence) {

@@ -10,8 +10,8 @@
 // ONNX Runtime头文件
 #include <onnxruntime/onnxruntime_cxx_api.h>
 
-Model::Model(const std::string& model_path, const ModelConfig& config)
-    : config_(config) {
+Model::Model(const std::string& model_path, const ModelConfig& config, float threshold)
+    : config_(config), detection_threshold_(threshold) {
     
     // 加载模型
     load_model(model_path);
@@ -177,10 +177,10 @@ std::vector<float> Model::forward(const std::vector<std::vector<float>>& feature
     }
 }
 
-std::pair<bool, float> Model::detect(const std::vector<std::vector<float>>& features, float threshold) {
+float Model::detect(const std::vector<std::vector<float>>& features) {
     // 检查特征有效性
     if (features.empty() || features[0].empty()) {
-        return {false, 0.0f};
+        return 0.0f; // 返回0置信度
     }
     
     // 执行前向传播
@@ -234,16 +234,9 @@ std::pair<bool, float> Model::detect(const std::vector<std::vector<float>>& feat
     }
     std::cout << "]" << std::endl;
     
-    std::cout << "[CPP-Debug] 置信度(索引1/关键词): " << confidence << ", 阈值: " << threshold << std::endl;
+    std::cout << "[CPP-Debug] 置信度(索引1/关键词): " << confidence << std::endl; // 不再打印阈值
     
-    // 判断是否为关键词
-    bool is_keyword = confidence > threshold;
-    
-    std::cout << "[CPP-Debug] 检测结果: " << (is_keyword ? "是关键词" : "不是关键词") 
-              << ", 置信度: " << confidence 
-              << ", 阈值: " << threshold << std::endl;
-    
-    return {is_keyword, confidence};
+    return confidence; // 只返回置信度
 }
 
 std::vector<float> Model::flatten_features(const std::vector<std::vector<float>>& features) {

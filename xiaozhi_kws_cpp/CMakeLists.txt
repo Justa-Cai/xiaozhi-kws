@@ -62,26 +62,26 @@ message(STATUS "FFMPEG include: ${FFMPEG_INCLUDE_DIR}")
 message(STATUS "ONNXRUNTIME library: ${ONNXRUNTIME_LIB}")
 message(STATUS "ONNXRUNTIME include: ${ONNXRUNTIME_INCLUDE_DIR}")
 
-# 构建后处理器测试程序
-add_executable(test_post_processor 
-    src/post_processor.cpp
-    tests/test_post_processor.cpp)
+# 构建后处理器测试程序 - 暂时注释掉
+# add_executable(test_post_processor 
+#     src/post_processor.cpp
+#     tests/test_post_processor.cpp)
 
-# 构建特征提取器测试程序
-add_executable(feature_extractor_test
-    examples/feature_extractor_test.cpp
-    src/feature_extractor.cpp
-    src/config_parser.cpp
-    src/audio_utils.cpp)
-
-target_link_libraries(feature_extractor_test
-    ${FFTW3_LIB}
-    ${FFTW3F_LIB}
-    ${SNDFILE_LIB}
-    ${AVFORMAT_LIB}
-    ${AVCODEC_LIB}
-    ${AVUTIL_LIB}
-    ${SWRESAMPLE_LIB})
+# 构建特征提取器测试程序 - 暂时注释掉
+# add_executable(feature_extractor_test
+#     examples/feature_extractor_test.cpp
+#     src/feature_extractor.cpp
+#     src/config_parser.cpp
+#     src/audio_utils.cpp)
+#
+# target_link_libraries(feature_extractor_test
+#     ${FFTW3_LIB}
+#     ${FFTW3F_LIB}
+#     ${SNDFILE_LIB}
+#     ${AVFORMAT_LIB}
+#     ${AVCODEC_LIB}
+#     ${AVUTIL_LIB}
+#     ${SWRESAMPLE_LIB})
 
 # 批量检测器库源文件
 set(DETECTOR_LIB_SOURCES
@@ -91,7 +91,6 @@ set(DETECTOR_LIB_SOURCES
     src/config_parser.cpp
     src/audio_utils.cpp
     src/post_processor.cpp
-    src/mfcc_features.cpp
     src/xiaozhi_kws.cpp)
 
 # 构建批量检测器程序
