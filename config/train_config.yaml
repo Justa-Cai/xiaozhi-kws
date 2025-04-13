@@ -1,0 +1,37 @@
+# 训练配置文件
+data:
+  train_path: "data/train"  # 训练数据路径
+  val_path: "data/val"      # 验证数据路径
+  keywords:                 # 关键词列表
+    - "kws"
+  negative_path: "data/train/negative"  # 负样本路径（非关键词）
+  background_path: "data/background"  # 背景噪音路径
+
+feature:
+  sample_rate: 16000        # 采样率
+  window_size_ms: 30        # 窗口大小（毫秒）
+  window_stride_ms: 10      # 窗口步长（毫秒）
+  n_mfcc: 40                # MFCC特征数量
+  n_fft: 512                # FFT点数
+  n_mels: 80                # Mel滤波器组数量
+  use_delta: true           # 是否使用MFCC一阶差分
+  use_delta2: false         # 是否使用MFCC二阶差分
+
+model:
+  type: "cnn_gru"           # 模型类型: "cnn", "cnn_gru", "transformer"
+  input_dim: 80             # 输入维度 (n_mfcc * (1 + use_delta + use_delta2))
+  hidden_dim: 64            # 隐藏层维度
+  num_layers: 2             # 层数
+  dropout: 0.1              # Dropout比例
+
+train:
+  epochs: 100               # 训练轮数
+  batch_size: 32            # 批大小
+  learning_rate: 0.001      # 学习率
+  weight_decay: 0.0001      # 权重衰减
+  patience: 10              # 早停耐心值
+  checkpoint_dir: "checkpoints"  # 检查点保存目录
+
+inference:
+  detection_threshold: 0.5  # 检测阈值
+  smoothing_window: 10      # 平滑窗口大小（帧数） 

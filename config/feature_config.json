@@ -1,0 +1,18 @@
+{
+    "sample_rate": 16000,
+    "window_size_ms": 30,
+    "window_stride_ms": 10,
+    "n_mfcc": 40,
+    "n_fft": 512,
+    "n_mels": 80,
+    "use_delta": true,
+    "use_delta2": false,
+    "low_freq": 0,
+    "high_freq": 8000,
+    "pre_emphasis": 0.97,
+    "dither": 0.0,
+    "frame_length": 400,
+    "frame_shift": 160,
+    "fft_size": 512,
+    "num_filters": 40
+} 

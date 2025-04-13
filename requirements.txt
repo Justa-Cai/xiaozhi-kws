@@ -1,0 +1,11 @@
+numpy>=1.20.0
+torch>=1.10.0
+torchaudio>=0.10.0
+scipy>=1.7.0
+matplotlib>=3.4.0
+librosa>=0.8.1
+sounddevice>=0.4.4
+scikit-learn>=0.24.0
+tqdm>=4.62.0
+google-cloud-texttospeech>=2.14.0
+PySocks>=1.7.1 
